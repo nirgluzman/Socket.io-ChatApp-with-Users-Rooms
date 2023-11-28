@@ -55,10 +55,34 @@ socket.on('connection', () => {
 // add an event listener to incoming messages.
 socket.on('message', (data) => {
 	typing.textContent = ''; // clear the typing notification.
-	console.log(`Received message: ${data}`);
-	const li = document.createElement('li');
-	li.textContent = data;
-	document.querySelector('ul').appendChild(li);
+
+	const {name, text, time} = data;
+	console.log(`Received message: ${name}`);
+
+	const messagePost = document.createElement('li');
+	messagePost.className = 'post';
+
+	if (name === nameInput.value) messagePost.className = 'post post--left';
+	if (name !== nameInput.value && name !== 'admin') messagePost.className = 'post post--right';
+
+	if (name !== 'admin') {
+		messagePost.innerHTML = `
+    <div class="post__header ${
+			name === nameInput.value ? 'post__header--user' : 'post__header--reply'
+		}">
+    <span class="post__header--name">${name}</span>
+    <span class="post__header--time">${time}</span>
+    <div class="post__text">${text}</div>
+    `;
+	} else {
+		messagePost.innerHTML = `
+    <div class="post__text">${text}</div>
+    `;
+	}
+
+	document.querySelector('.chat-display').appendChild(messagePost);
+
+	chatDisplay.scrollTop = chatDisplay.scrollHeight; // scroll to the bottom of the chat display.
 });
 
 // add an event listener to incoming typing events, with an activity timer.
