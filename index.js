@@ -52,7 +52,7 @@ io.on('connection', (socket) => {
 			io.to(prevRoom).emit(
 				// send messages directly to specific users or groups of users.
 				'message',
-				buildMessage(ADMIN, `${getUser(socket.id)?.name} has left the room!`)
+				buildMessage(ADMIN, `${getUser(socket.id)?.name} has left the room ${prevRoom}!`)
 			);
 		}
 
@@ -69,17 +69,20 @@ io.on('connection', (socket) => {
 		// to user who joined the room.
 		socket.emit('message', buildMessage(ADMIN, `Welcome to the room ${user.room}!`));
 
-		// to everyone else - other users in the room.
-		socket.broadcast.emit('message', buildMessage(ADMIN, `${user.name} has joined!`));
+		// to everyone else - other users.
+		socket.broadcast.emit(
+			'message',
+			buildMessage(ADMIN, `${user.name} has joined the room ${user.room}!`)
+		);
 
 		// update user list in the room.
 		io.to(user.room).emit('userList', {users: getUsersInRoom(user.room)});
 
-		// update rooms list to all users.
+		// update room list to all users.
 		io.emit('roomList', {rooms: getAllActiveRooms()});
 	});
 
-	// when user disconnects - message to others.
+	// when user disconnects - message only to users in the room.
 	socket.on('disconnect', (reason) => {
 		console.log(`User ${socket.id} disconnected! ${reason}`);
 
@@ -87,8 +90,16 @@ io.on('connection', (socket) => {
 		deactivateUser(socket.id);
 
 		if (user) {
-			io.to(user.room).emit('message', buildMessage(ADMIN, `${user.name} has left!`));
+			// send 'disconnect' message only to users in the room.
+			// io.to(user.room).emit('message', buildMessage(ADMIN, `${user.name} has left the Chat App!`));
+
+			// send 'disconnect' message to all users in the Chat App.
+			io.emit('message', buildMessage(ADMIN, `${user.name} has left the Chat App!`));
+
+			// update user list in the room.
 			io.to(user.room).emit('userList', {users: getUsersInRoom(user.room)});
+
+			// update room list to all users.
 			io.emit('roomList', {rooms: getAllActiveRooms()});
 		}
 	});
@@ -149,6 +160,6 @@ function getUsersInRoom(room) {
 }
 
 function getAllActiveRooms() {
-	return Array.from(new Set(UsersState.users.map((user) => user.room))); // Set to avoid duplicants.
+	return Array.from(new Set(UsersState.users.map((user) => user.room))); // 'Set' to avoid duplicants.
 }
 
