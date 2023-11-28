@@ -40,30 +40,78 @@ const io = new Server(expressServer, {
 io.on('connection', (socket) => {
 	console.log(`User ${socket.id} connected!`);
 
-	// Upon connection - send a welcome message ONLY to the new user.
-	socket.emit('message', 'Welcome to Chat App!');
+	// upon connection - send a welcome message ONLY to the new user.
+	socket.emit('message', buildMessage(ADMIN, 'Welcome to Chat App!'));
 
-	// Upon connection - send a message to ALL clients excl. the new user.
-	socket.broadcast.emit('message', `${socket.id.substring(0, 5)} has joined!`);
+	// upon connection - send a list of users in the room ONLY to the new user.
+	socket.on('joinRoom', ({name, room}) => {
+		// leave previous room
+		const prevRoom = getUser(socket.id)?.room;
+		if (prevRoom) {
+			socket.leave(prevRoom); // remove a user from a specific channel or room.
+			io.to(prevRoom).emit(
+				// send messages directly to specific users or groups of users.
+				'message',
+				buildMessage(ADMIN, `${getUser(socket.id)?.name} has left the room!`)
+			);
+		}
 
-	// Listening for a message event.
-	socket.on('message', (data) => {
-		console.log(`Received message: ${data}`);
-		// send a message to all clients, include sender.
-		io.emit('message', `${socket.id.substring(0, 5)}: ${data}`);
-	});
+		const user = activateUser(socket.id, name, room);
 
-	// Listening for a typing event.
-	socket.on('typing', (name) => {
-		console.log(`${name} is typing ...`);
-		// send a message to all clients, excl. sender.
-		socket.broadcast.emit('typing', name);
+		// we cannot update previous room users list until after the state update in active user.
+		if (prevRoom) {
+			io.to(prevRoom).emit('userList', {users: getUsersInRoom(prevRoom)});
+		}
+
+		// join new room
+		socket.join(user.room);
+
+		// to user who joined the room.
+		socket.emit('message', buildMessage(ADMIN, `Welcome to the room ${user.room}!`));
+
+		// to everyone else - other users in the room.
+		socket.broadcast.emit('message', buildMessage(ADMIN, `${user.name} has joined the room!`));
+
+		// update user list in the room.
+		io.to(user.room).emit('userList', {users: getUsersInRoom(user.room)});
+
+		// update rooms list to all users.
+		io.emit('roomList', {rooms: getAllActiveRooms()});
 	});
 
 	// when user disconnects - message to others.
 	socket.on('disconnect', (reason) => {
 		console.log(`User ${socket.id} disconnected! ${reason}`);
-		socket.broadcast.emit('message', `${socket.id.substring(0, 5)} has left!`);
+
+		const user = getUser(socket.id);
+		deactivateUser(socket.id);
+
+		if (user) {
+			io.to(user.room).emit('message', buildMessage(ADMIN, `${user.name} has left the room!`));
+			io.to(user.room).emit('userList', {users: getUsersInRoom(user.room)});
+			io.emit('roomList', {rooms: getAllActiveRooms()});
+		}
+	});
+
+	// listening for a message event.
+	socket.on('message', ({name, text}) => {
+		console.log(`Received message: ${name}`);
+
+		const room = getUser(socket.id)?.room;
+		if (room) {
+			io.to(room).emit('message', buildMessage(name, text));
+		}
+	});
+
+	// listening for a typing event.
+	socket.on('typing', (name) => {
+		console.log(`${name} is typing ...`);
+
+		const room = getUser(socket.id)?.room;
+		// send a message to all users in room, excl. sender.
+		if (room) {
+			socket.broadcast.to(room).emit('typing', name);
+		}
 	});
 });
 
