@@ -70,7 +70,7 @@ io.on('connection', (socket) => {
 		socket.emit('message', buildMessage(ADMIN, `Welcome to the room ${user.room}!`));
 
 		// to everyone else - other users in the room.
-		socket.broadcast.emit('message', buildMessage(ADMIN, `${user.name} has joined the room!`));
+		socket.broadcast.emit('message', buildMessage(ADMIN, `${user.name} has joined!`));
 
 		// update user list in the room.
 		io.to(user.room).emit('userList', {users: getUsersInRoom(user.room)});
@@ -87,7 +87,7 @@ io.on('connection', (socket) => {
 		deactivateUser(socket.id);
 
 		if (user) {
-			io.to(user.room).emit('message', buildMessage(ADMIN, `${user.name} has left the room!`));
+			io.to(user.room).emit('message', buildMessage(ADMIN, `${user.name} has left!`));
 			io.to(user.room).emit('userList', {users: getUsersInRoom(user.room)});
 			io.emit('roomList', {rooms: getAllActiveRooms()});
 		}

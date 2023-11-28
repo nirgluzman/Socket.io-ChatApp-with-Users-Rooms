@@ -39,8 +39,8 @@ function joinRoom(e) {
 
 // add an event listener to a form elements.
 // the event listener triggers the sendMessage() function whenever the form is submitted.
-document.querySelector('form-message').addEventListener('submit', sendMessage);
-document.querySelector('form-join').addEventListener('submit', joinRoom);
+document.querySelector('.form-message').addEventListener('submit', sendMessage);
+document.querySelector('.form-join').addEventListener('submit', joinRoom);
 
 // notify the Server when the user is typing a message.
 msgInput.addEventListener('keypress', () => {
@@ -72,8 +72,8 @@ socket.on('message', (data) => {
 		}">
     <span class="post__header--name">${name}</span>
     <span class="post__header--time">${time}</span>
-    <div class="post__text">${text}</div>
-    `;
+    </div>
+    <div class="post__text">${text}</div>`;
 	} else {
 		messagePost.innerHTML = `
     <div class="post__text">${text}</div>
@@ -88,11 +88,46 @@ socket.on('message', (data) => {
 // add an event listener to incoming typing events, with an activity timer.
 let activityTimer;
 socket.on('typing', (name) => {
-  typing.textContent = `${name} is typing...`;
+	typing.textContent = `${name} is typing...`;
 
-  // Clear after 3 seconds
-  clearTimeout(activityTimer);
-  activityTimer = setTimeout(() => {
-    typing.textContent = '';
-  },3000);
+	// Clear after 3 seconds
+	clearTimeout(activityTimer);
+	activityTimer = setTimeout(() => {
+		typing.textContent = '';
+	}, 3000);
 });
+
+// show user list in the room.
+socket.on('userList', ({users}) => {
+	showUsers(users);
+});
+
+// show room list.
+socket.on('roomList', ({rooms}) => {
+	showRooms(rooms);
+});
+
+function showUsers(users) {
+	userList.textContent = '';
+	if (users) {
+		userList.innerHTML = `<em>Users in ${chatRoom.value}:</em>`;
+		users.forEach((user, i) => {
+			userList.textContent += ` ${user.name}`;
+			if (i < users.length - 1) userList.textContent += ',';
+		});
+	}
+	userList.textContent += '.';
+}
+
+function showRooms(rooms) {
+	roomList.textContent = '';
+	if (users) {
+		roomList.innerHTML = `<em>Active Rooms:</em>`;
+		rooms.forEach((room, i) => {
+			roomList.textContent += ` ${room}`;
+			if (i < room.length - 1) roomList.textContent += ',';
+		});
+	}
+	roomList.textContent += '.';
+}
+
