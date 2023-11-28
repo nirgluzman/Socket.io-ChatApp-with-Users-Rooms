@@ -5,40 +5,60 @@ import { io } from 'https://cdn.socket.io/4.7.2/socket.io.esm.min.js';
 const socket = io('ws://localhost:3000');
 
 // querySelector() returns the first Element within the document that matches the specified selector.
-const msgInput = document.querySelector('input');
+const nameInput = document.querySelector('#name');
+const chatRoom = document.querySelector('#room');
+const msgInput = document.querySelector('#message');
+
+const chatDisplay = document.querySelector('.chat-display');
+const userList = document.querySelector('.user-list');
+const roomList = document.querySelector('.room-list');
 const typing = document.querySelector('.typing');
 
 function sendMessage(e) {
-  e.preventDefault(); // submit the form without reload the page.
-  if (msgInput.value) {
-    socket.emit('message', msgInput.value);
-    msgInput.value = '';
-  }
-  // set the focus back to input element without having to manually click on it.
-  msgInput.focus();
-};
+	e.preventDefault(); // submit the form without reload the page.
+	if (nameInput.value && chatRoom.value && msgInput.value) {
+		socket.emit('message', {
+			name: nameInput.value,
+			text: msgInput.value,
+		});
+		msgInput.value = '';
+	}
+	// set the focus back to input element without having to manually click on it.
+	msgInput.focus();
+}
 
-// add an event listener to a form element.
+function joinRoom(e) {
+	e.preventDefault();
+	if (nameInput.value && chatRoom.value) {
+		socket.emit('joinRoom', {
+			name: nameInput.value,
+			room: chatRoom.value,
+		});
+	}
+}
+
+// add an event listener to a form elements.
 // the event listener triggers the sendMessage() function whenever the form is submitted.
-document.querySelector('form').addEventListener('submit', sendMessage);
+document.querySelector('form-message').addEventListener('submit', sendMessage);
+document.querySelector('form-join').addEventListener('submit', joinRoom);
 
 // notify the Server when the user is typing a message.
 msgInput.addEventListener('keypress', () => {
-  socket.emit('typing', socket.id.substring(0, 5));
+	socket.emit('typing', nameInput.value);
 });
 
 // add an event listener to a socket.io connection.
 socket.on('connection', () => {
-  console.log('Connected to the server!');
+	console.log('Connected to the server!');
 });
 
 // add an event listener to incoming messages.
 socket.on('message', (data) => {
-  typing.textContent = ''; // clear the typing notification.
-  console.log(`Received message: ${data}`);
-  const li = document.createElement('li');
-  li.textContent = data;
-  document.querySelector('ul').appendChild(li);
+	typing.textContent = ''; // clear the typing notification.
+	console.log(`Received message: ${data}`);
+	const li = document.createElement('li');
+	li.textContent = data;
+	document.querySelector('ul').appendChild(li);
 });
 
 // add an event listener to incoming typing events, with an activity timer.
